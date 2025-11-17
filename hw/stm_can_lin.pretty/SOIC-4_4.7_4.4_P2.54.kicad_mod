@@ -1,0 +1,210 @@
+(footprint "SOIC-4_4.7_4.4_P2.54"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "SOIC, 4 Pin")
+	(tags "SOIC, 4 Pin")
+	(property "Reference" "REF**"
+		(at 0 -2.75 0)
+		(layer "F.SilkS")
+		(uuid "b9f7dcea-b099-491a-b9b1-83e541ffd122")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "SOIC-4_4.7_4.4_P2.54"
+		(at 0 2.75 0)
+		(layer "F.Fab")
+		(uuid "337c535c-79a5-4351-bb64-bd41cac97e5b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "29952e26-a3f3-4940-b9a7-1334339a6b66")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "6ed2626d-2193-49ce-aa27-1931769156df")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -2.31 -2.38)
+		(end 2.31 -2.38)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "db4e5f8a-66a4-452d-b395-000ba7c0a044")
+	)
+	(fp_line
+		(start -2.31 0.61)
+		(end -2.31 -0.61)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "a6263e2f-41c6-400d-86ce-88ad8e10b44e")
+	)
+	(fp_line
+		(start 2.31 -0.61)
+		(end 2.31 0.61)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "1efd6aa3-e60a-44cc-8469-120eb31cc585")
+	)
+	(fp_line
+		(start 2.31 2.38)
+		(end -2.31 2.38)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "8e04121e-4a6c-4924-8768-bc4fef58ed9e")
+	)
+	(fp_poly
+		(pts
+			(xy -3.15 -0.61) (xy -2.81 -0.14) (xy -3.49 -0.14)
+		)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill yes)
+		(layer "F.SilkS")
+		(uuid "e16d76e9-6579-4ba8-913b-22608b0082c1")
+	)
+	(fp_line
+		(start -4 -2.43)
+		(end 4 -2.43)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "c20917ec-2394-4ec7-ac12-d2220feaaec0")
+	)
+	(fp_line
+		(start -4 2.45)
+		(end -4 -2.43)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "c2f04ed4-0e23-4390-8479-3bf89e9f3b7c")
+	)
+	(fp_line
+		(start 4 -2.43)
+		(end 4 2.45)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "3ded421b-b8f2-4339-87df-f36663171195")
+	)
+	(fp_line
+		(start 4 2.45)
+		(end -4 2.45)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "aef3be26-f02b-440e-bb44-24a8401054fe")
+	)
+	(fp_poly
+		(pts
+			(xy -2.2 -0.9) (xy -2.2 1.8) (xy 2.2 1.8) (xy 2.2 -1.8) (xy -1.3 -1.8)
+		)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "cb09d0d4-4300-4ced-bb57-a2288216af7d")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "6ab12ef3-d0de-47d9-9b6d-bbde09d8d584")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd roundrect
+		(at -3.15 -1.27)
+		(size 1.2 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "68b7f31b-81e4-4099-80ac-df5cba0994e5")
+	)
+	(pad "3" smd roundrect
+		(at -3.15 1.27)
+		(size 1.2 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "7c83bac9-926b-4876-b574-977f3eb52c4d")
+	)
+	(pad "4" smd roundrect
+		(at 3.15 1.27)
+		(size 1.2 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "35f10dfd-587e-4231-9163-f7620af1d442")
+	)
+	(pad "6" smd roundrect
+		(at 3.15 -1.27)
+		(size 1.2 0.8)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "2335cac6-e27a-40ea-9caf-6820ef71ceeb")
+	)
+	(embedded_fonts no)
+	(model "${KICAD9_3DMODEL_DIR}/Package_SO.3dshapes/Toshiba_SOIC-4-6_4.4x3.6mm_P1.27mm.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

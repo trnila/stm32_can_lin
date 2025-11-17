@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "stm_can_lin")(type "KiCad")(uri "${KIPRJMOD}/stm_can_lin.kicad_sym")(options "")(descr ""))
+)
