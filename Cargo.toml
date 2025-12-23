@@ -1,0 +1,71 @@
+[package]
+edition = "2024"
+name = "stm32_can_lin"
+version = "0.0.0"
+
+[dependencies]
+binary-layout = { version = "4.0.2", default-features = false }
+cortex-m = { version = "0.7.7", features = ["inline-asm", "critical-section-single-core"] }
+cortex-m-rt = "0.7.5"
+defmt = { version = "1.0.1", optional = true }
+defmt-rtt = { version = "1.1.0", optional = true }
+embassy-executor = { version = "0.9.1", features = ["arch-cortex-m", "executor-thread"] }
+embassy-futures = "0.1.2"
+embassy-stm32 = { version = "0.4.0", features = ["memory-x", "stm32g474re", "time-driver-any", "exti", "unstable-pac", "single-bank"] }
+embassy-sync = "0.7.2"
+embassy-time = { version = "0.5.0", features = ["tick-hz-1_000_000"] }
+embassy-usb = "0.5.1"
+embedded-can = "0.4.1"
+embedded-io-async = "0.7.0"
+panic-halt = "1.0.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"], optional = true }
+
+[[bin]]
+name = "stm32_can_lin"
+test = false
+bench = false
+
+[profile.dev]
+debug = true
+lto = true
+opt-level = "z"
+incremental = true
+
+[profile.release]
+debug = false
+lto = true
+opt-level = "z"
+incremental = true
+
+[features]
+defmt = ["dep:defmt"]
+defmt-rtt = ["dep:defmt-rtt"]
+panic-probe = ["dep:panic-probe"]
+default = ["debug"]
+debug = [
+    "defmt",
+    "defmt-rtt",
+    "panic-probe",
+    "embassy-executor/defmt",
+    "embassy-sync/defmt",
+    "embassy-futures/defmt",
+    "embassy-time/defmt",
+    "embassy-time/defmt-timestamp-uptime",
+    "embassy-stm32/defmt",
+]
+arb = []
+
+[patch.crates-io]
+embassy-stm32  = { git = "https://github.com/trnila/embassy", rev = "63715229f5587f04b5da99af8166878dde58c892" }
+embassy-time  = { git = "https://github.com/trnila/embassy", rev = "63715229f5587f04b5da99af8166878dde58c892" }
+embassy-executor  = { git = "https://github.com/trnila/embassy", rev = "63715229f5587f04b5da99af8166878dde58c892" }
+embassy-futures  = { git = "https://github.com/trnila/embassy", rev = "63715229f5587f04b5da99af8166878dde58c892" }
+embassy-sync  = { git = "https://github.com/trnila/embassy", rev = "63715229f5587f04b5da99af8166878dde58c892" }
+embassy-usb  = { git = "https://github.com/trnila/embassy", rev = "63715229f5587f04b5da99af8166878dde58c892" }
+
+#embassy-stm32  = { path = "../embassy/embassy-stm32" }
+#embassy-time  = { path = "../embassy/embassy-time" }
+#embassy-executor  = { path = "../embassy/embassy-executor" }
+#embassy-futures  = { path = "../embassy/embassy-futures" }
+#embassy-sync  = { path = "../embassy/embassy-sync" }
+#embassy-usb  = { path = "../embassy/embassy-usb" }
