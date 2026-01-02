@@ -1,7 +1,10 @@
 use binary_layout::prelude::*;
 use defmt::Format;
 use embassy_futures::{block_on, join::join3};
-use embassy_stm32::{can::Frame, peripherals::USB};
+use embassy_stm32::{
+    can::{Frame, frame::FdFrame},
+    peripherals::USB,
+};
 use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Receiver};
 use embassy_usb::{
     Builder, Handler,
@@ -19,25 +22,32 @@ pub type UsbResponseTx =
 /// Size of per-interface queue for commands from USB
 pub const CHANNEL_QUEUE_SIZE: usize = 256;
 /// Size of shared queue for responses to USB
-pub const USB_QUEUE_SIZE: usize = 1024;
+pub const USB_QUEUE_SIZE: usize = 512;
 /// Number of CAN interfaces supported
 pub const INTERFACES: usize = 3;
 /// Maximal size of USB BULK packet for USB Full-Speed
 const BULK_MAX_PACKET_SIZE: u16 = 64;
 /// Maximal size of USB transfer for one CAN message
 const BULK_BUF_SIZE: usize = 128;
+/// Maximal payload of CAN-FD frame
+const CAN_FD_MAX_DLC: usize = 64;
 
 /// Frequency of the CAN peripheral clock in Hz (used for bit timing calculations in Linux)
 const CAN_FREQ: u32 = 24_000_000;
+
+const GS_CAN_FEATURE_FD: u32 = 1 << 8;
 
 const GS_USB_BREQ_HOST_FORMAT: u8 = 0;
 const GS_USB_BREQ_BITTIMING: u8 = 1;
 const GS_USB_BREQ_MODE: u8 = 2;
 const GS_USB_BREQ_BT_CONST: u8 = 4;
 const GS_USB_BREQ_DEVICE_CONFIG: u8 = 5;
+const GS_USB_BREQ_DATA_BITTIMING: u8 = 10;
 
 const GS_CAN_MODE_RESET: u32 = 0;
 const GS_CAN_MODE_START: u32 = 1;
+
+const GS_CAN_FLAG_FD: u8 = 1 << 1;
 
 const CAN_EFF_FLAG: u32 = 0x80000000;
 const CAN_EFF_MASK: u32 = 0x1FFFFFFF;
@@ -95,7 +105,7 @@ binary_layout!(gs_host_frame_hdr, LittleEndian, {
 
 binary_layout!(gs_host_frame, LittleEndian, {
     hdr: gs_host_frame_hdr::NestedView,
-    data: [u8; 8],
+    data: [u8; CAN_FD_MAX_DLC],
 });
 
 binary_layout!(gs_device_bittiming, LittleEndian, {
@@ -121,6 +131,12 @@ macro_rules! assert_view_fits {
     }};
 }
 
+#[derive(Format, Copy, Clone)]
+pub enum FrameType {
+    Classic(Frame),
+    FD(FdFrame),
+}
+
 /// Commands sent from USB to CAN task
 #[derive(Format)]
 pub enum UsbCommand {
@@ -130,9 +146,11 @@ pub enum UsbCommand {
     Start,
     /// Set nominal bit timing parameters (only in configuration mode)
     SetNominalBitTiming(BitTiming),
+    /// Set data bit timing parameters (only in configuration mode)
+    SetDataBitTiming(BitTiming),
     /// Transmit CAN frame (only in normal mode)
     TxFrame {
-        frame: Frame,
+        frame: FrameType,
         /// ID to send back to USB on successful transmission
         echo_id: u32,
     },
@@ -143,7 +161,7 @@ pub enum UsbResponse {
     /// Acknowledgement of transmitted frame
     EchoId { channel: u8, echo_id: u32 },
     /// Received CAN frame
-    RxFrame { channel: u8, frame: Frame },
+    RxFrame { channel: u8, frame: FrameType },
 }
 
 #[derive(Debug, Format)]
@@ -164,6 +182,41 @@ pub struct UsbCommandQueues {
         UsbCommand,
         CHANNEL_QUEUE_SIZE,
     >; INTERFACES],
+}
+
+fn bytes_len_to_dlc(bytes: u8) -> u8 {
+    match bytes {
+        len if len <= 8 => len,
+        9..=12 => 9,
+        13..=16 => 10,
+        17..=20 => 11,
+        21..=24 => 12,
+        25..=32 => 13,
+        33..=48 => 14,
+        49..=64 => 15,
+        _ => unreachable!(),
+    }
+}
+
+fn dlc_to_bytes_len(dlc: usize) -> usize {
+    match dlc {
+        dlc if dlc <= 8 => dlc,
+        9 => 12,
+        10 => 16,
+        11 => 20,
+        12 => 24,
+        13 => 32,
+        14 => 48,
+        15 => 64,
+        _ => unreachable!(),
+    }
+}
+
+fn frame_id_to_raw_with_flags<T: embedded_can::Frame>(frame: T) -> u32 {
+    match frame.id() {
+        embedded_can::Id::Standard(standard_id) => standard_id.as_raw() as u32,
+        embedded_can::Id::Extended(extended_id) => CAN_EFF_FLAG | extended_id.as_raw(),
+    }
 }
 
 /// USB control request handler for gs_usb
@@ -206,6 +259,18 @@ impl Handler for GsUsbControlHandler {
                 block_on(command_queue.send(UsbCommand::SetNominalBitTiming(bit_timing)));
                 OutResponse::Accepted
             }
+            GS_USB_BREQ_DATA_BITTIMING => {
+                let (view, _len) = assert_view_fits!(gs_device_bittiming, &buf);
+                let bit_timing = BitTiming {
+                    prop_seg: view.prop_seg().read(),
+                    phase_seg1: view.phase_seg1().read(),
+                    phase_seg2: view.phase_seg2().read(),
+                    sjw: view.sjw().read(),
+                    brp: view.brp().read(),
+                };
+                block_on(command_queue.send(UsbCommand::SetDataBitTiming(bit_timing)));
+                OutResponse::Accepted
+            }
             GS_USB_BREQ_MODE => {
                 let (view, _len) = assert_view_fits!(gs_device_mode, &buf);
                 block_on(command_queue.send(match view.mode().read() {
@@ -238,6 +303,7 @@ impl Handler for GsUsbControlHandler {
             }
             GS_USB_BREQ_BT_CONST => {
                 let (mut view, len) = assert_view_fits!(gs_device_bt_const, &mut buf);
+                view.feature_mut().write(GS_CAN_FEATURE_FD);
                 view.fclk_can_mut().write(CAN_FREQ);
 
                 view.tseg1_min_mut().write(1);
@@ -281,7 +347,17 @@ async fn usb_to_can<T: EndpointOut>(mut read_ep: T, tx: UsbCommandQueues) {
                             Id::Standard(StandardId::new(raw_can_id as u16).unwrap())
                         }
                     };
-                    let frame = Frame::new_data(can_id, &view.data()[..dlc]).unwrap();
+                    let frame = if (view.hdr().flags().read() & GS_CAN_FLAG_FD) > 0 {
+                        FrameType::FD(
+                            <FdFrame as embedded_can::Frame>::new(
+                                can_id,
+                                &view.data()[..dlc_to_bytes_len(dlc)],
+                            )
+                            .unwrap(),
+                        )
+                    } else {
+                        FrameType::Classic(Frame::new_data(can_id, &view.data()[..dlc]).unwrap())
+                    };
                     let echo_id = view.hdr().echo_id().read();
                     let channel = view.hdr().channel().read() as usize;
                     tx.channel[channel]
@@ -309,10 +385,16 @@ async fn can_to_usb<T: EndpointIn>(
         // Determine and check it fits into USB packet
         let usb_len = gs_host_frame_hdr::SIZE.unwrap()
             + match frame {
-                UsbResponse::RxFrame { frame, .. } => {
-                    assert!(frame.data().len() == frame.header().len() as usize);
-                    frame.data().len()
-                }
+                UsbResponse::RxFrame { frame, .. } => match frame {
+                    FrameType::Classic(frame) => {
+                        assert!(frame.data().len() == frame.header().len() as usize);
+                        frame.data().len()
+                    }
+                    FrameType::FD(fd_frame) => {
+                        assert!(fd_frame.data().len() == fd_frame.header().len() as usize);
+                        fd_frame.data().len()
+                    }
+                },
                 UsbResponse::EchoId { .. } => 0,
             };
         assert!(usb_len <= usb_buf.len());
@@ -331,15 +413,27 @@ async fn can_to_usb<T: EndpointIn>(
             }
             UsbResponse::RxFrame { channel, frame } => {
                 hdr.echo_id_mut().write(u32::MAX);
-                hdr.can_id_mut().write(match frame.id() {
-                    embedded_can::Id::Standard(standard_id) => standard_id.as_raw() as u32,
-                    embedded_can::Id::Extended(extended_id) => CAN_EFF_FLAG | extended_id.as_raw(),
-                });
-                hdr.can_dlc_mut().write(frame.header().len());
                 hdr.channel_mut().write(channel);
                 hdr.flags_mut().write(0);
                 hdr.reserved_mut().write(0);
-                view.data_mut()[..frame.header().len() as usize].copy_from_slice(frame.data());
+                hdr.can_id_mut().write(match frame {
+                    FrameType::Classic(frame) => frame_id_to_raw_with_flags(frame),
+                    FrameType::FD(fd_frame) => frame_id_to_raw_with_flags(fd_frame),
+                });
+                match frame {
+                    FrameType::Classic(frame) => {
+                        hdr.can_dlc_mut().write(frame.header().len());
+                        view.data_mut()[..frame.header().len() as usize]
+                            .copy_from_slice(frame.data());
+                    }
+                    FrameType::FD(frame) => {
+                        hdr.can_dlc_mut()
+                            .write(bytes_len_to_dlc(frame.header().len()));
+                        hdr.flags_mut().write(GS_CAN_FLAG_FD);
+                        view.data_mut()[..frame.header().len() as usize]
+                            .copy_from_slice(frame.data());
+                    }
+                }
             }
         }
 

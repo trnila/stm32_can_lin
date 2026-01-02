@@ -1,7 +1,7 @@
 # STM32 Triple CAN/LIN USB bridge
-STM32G4xx firmware written in Rust using the Embassy framework that bridges CAN buses to Linux via USB using the `gs_usb` driver and socketCAN interface.
+STM32G4xx firmware written in Rust using the Embassy framework that bridges CAN-FD buses to Linux via USB using the `gs_usb` driver and socketCAN interface.
 
-- 3x CAN channels
+- 3x CAN-FD channels
 
 <img src="hw/board.webp">
 
@@ -24,6 +24,19 @@ After that, you can start sending and receiving CAN frames:
 ```sh
 $ candump can0
 $ cansend can0 123#abcd
+```
+
+## Configuration
+All configurations must be done while the interface is in the `down` state.
+```sh
+$ sudo ip link set can0 down
+```
+After the configuration, bring the interface `up`.
+
+### CAN-FD mode and data bitrate
+Set CAN to 500 Kbps and CAN-FD to 1 Mbps:
+```sh
+$ sudo ip link set can0 type can bitrate 500000 fd on dbitrate 1000000
 ```
 
 ## Test
