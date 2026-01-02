@@ -27,6 +27,7 @@ $ cansend can0 123#abcd
 ## Test
 Install following dependencies:
 - uv
+- [can-utils](https://github.com/linux-can/can-utils)
 
 Next, connect the DUT's `can0` interface to the tester's `can1_0` interface, and so on. Then run:
 ```sh

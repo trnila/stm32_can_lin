@@ -138,5 +138,17 @@ def test_bitrates(channel_role: str, bitrate: int):
         assert list(received.data) == [1, 2, 3, 4, 5, 6, 7, 8]
 
 
+@pytest.mark.parametrize("channel_role", ALL_CHANNEL_ROLES, ids=channel_role_id)
+def test_full_duplex(channel_role: str):
+    with open_buses(channel_role) as buses:
+        with subprocess.Popen(["canfdtest", "-vv", buses.rx.channel]) as dut:
+            try:
+                subprocess.check_call(
+                    ["canfdtest", "-g", "-l", "1000", buses.tx.channel], timeout=5
+                )
+            finally:
+                dut.kill()
+
+
 if __name__ == "__main__":
     pytest.main()
