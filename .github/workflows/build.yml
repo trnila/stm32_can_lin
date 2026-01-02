@@ -1,0 +1,33 @@
+name: Lint and build
+
+on:
+  push:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --profile release
+      - uses: actions/upload-artifact@v6
+        with:
+          name: stm32_can_lin
+          path: target/thumbv7em-none-eabi/release/stm32_can_lin
+          if-no-files-found: error
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: target/thumbv7em-none-eabi/release/stm32_can_lin
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+    - uses: Swatinem/rust-cache@v2
+    - run: pip install pre-commit
+    - run: pre-commit run --show-diff-on-failure --color=always --all-files
