@@ -22,8 +22,11 @@ pub const CHANNEL_QUEUE_SIZE: usize = 64;
 pub const USB_QUEUE_SIZE: usize = 64;
 /// Number of CAN interfaces supported
 pub const INTERFACES: usize = 3;
-/// Maximal size of USB BULK packet
-const BULK_MAX_PACKET_SIZE: usize = 128;
+/// Maximal size of USB BULK packet for USB Full-Speed
+const BULK_MAX_PACKET_SIZE: u16 = 64;
+/// Maximal size of USB transfer for one CAN message
+const BULK_BUF_SIZE: usize = 128;
+
 /// Frequency of the CAN peripheral clock in Hz (used for bit timing calculations in Linux)
 const CAN_FREQ: u32 = 24_000_000;
 
@@ -257,11 +260,11 @@ impl Handler for GsUsbControlHandler {
 
 /// Pumps CAN frames from USB into per-interface queues
 async fn usb_to_can<T: EndpointOut>(mut read_ep: T, tx: UsbCommandQueues) {
-    let mut usb_buf = [0; BULK_MAX_PACKET_SIZE];
+    let mut usb_buf = [0; BULK_BUF_SIZE];
     loop {
         read_ep.wait_enabled().await;
         loop {
-            match read_ep.read(&mut usb_buf).await {
+            match read_ep.read_transfer(&mut usb_buf).await {
                 Ok(n) => {
                     // Check the USB packet contains the full CAN frame
                     assert!(gs_host_frame_hdr::SIZE.unwrap() <= n);
@@ -299,7 +302,7 @@ async fn can_to_usb<T: EndpointIn>(
     mut write_ep: T,
     rx: Receiver<'static, ThreadModeRawMutex, UsbResponse, USB_QUEUE_SIZE>,
 ) {
-    let mut usb_buf = [0; BULK_MAX_PACKET_SIZE];
+    let mut usb_buf = [0; BULK_BUF_SIZE];
     loop {
         let frame = rx.receive().await;
 
@@ -340,7 +343,10 @@ async fn can_to_usb<T: EndpointIn>(
             }
         }
 
-        write_ep.write(&usb_buf[..usb_len]).await.unwrap();
+        write_ep
+            .write_transfer(&usb_buf[..usb_len], false)
+            .await
+            .unwrap();
     }
 }
 
@@ -388,14 +394,14 @@ pub async fn usb_init(
             1,
             embassy_usb::driver::Direction::Out,
         )),
-        BULK_MAX_PACKET_SIZE as u16,
+        BULK_MAX_PACKET_SIZE,
     );
     let write_ep = alt.endpoint_bulk_in(
         Some(EndpointAddress::from_parts(
             1,
             embassy_usb::driver::Direction::In,
         )),
-        BULK_MAX_PACKET_SIZE as u16,
+        BULK_MAX_PACKET_SIZE,
     );
     drop(function);
     builder.handler(&mut handler);
