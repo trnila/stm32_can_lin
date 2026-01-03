@@ -14,7 +14,7 @@ use embedded_can::{ExtendedId, Id, StandardId};
 pub type UsbCommandRx =
     embassy_sync::channel::Receiver<'static, ThreadModeRawMutex, UsbCommand, CHANNEL_QUEUE_SIZE>;
 pub type UsbResponseTx =
-    embassy_sync::channel::Sender<'static, ThreadModeRawMutex, UsbResponse, CHANNEL_QUEUE_SIZE>;
+    embassy_sync::channel::Sender<'static, ThreadModeRawMutex, UsbResponse, USB_QUEUE_SIZE>;
 
 /// Size of per-interface queue for commands from USB
 pub const CHANNEL_QUEUE_SIZE: usize = 64;
