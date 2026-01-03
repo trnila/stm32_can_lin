@@ -39,10 +39,24 @@ class CanMsgId:
     is_extended_id: bool
 
 
+@dataclass
+class CanFullDuplexTest:
+    """Arguments for canfdtest (CAN Full-Duplex Test) program"""
+
+    description: str
+    args: list[str]
+
+
 CHANNELS = [0, 1, 2]
 ROLES = [ChannelRole.TX, ChannelRole.RX]
 ALL_CHANNEL_ROLES = [
     DutChannelRole(chan, role) for chan, role in itertools.product(CHANNELS, ROLES)
+]
+CAN_FULL_DUPLEX_CONFIGS = [
+    CanFullDuplexTest("standard", []),
+    CanFullDuplexTest("extended", ["-e"]),
+    CanFullDuplexTest("standard-1byte", ["-s", "1"]),
+    CanFullDuplexTest("standard-7byte", ["-s", "7"]),
 ]
 
 
@@ -139,12 +153,18 @@ def test_bitrates(channel_role: str, bitrate: int):
 
 
 @pytest.mark.parametrize("channel_role", ALL_CHANNEL_ROLES, ids=channel_role_id)
-def test_full_duplex(channel_role: str):
+@pytest.mark.parametrize(
+    "config", CAN_FULL_DUPLEX_CONFIGS, ids=lambda config: config.description
+)
+def test_full_duplex(channel_role: str, config: CanFullDuplexTest):
     with open_buses(channel_role) as buses:
-        with subprocess.Popen(["canfdtest", "-vv", buses.rx.channel]) as dut:
+        with subprocess.Popen(
+            ["canfdtest", "-vv", buses.rx.channel] + config.args
+        ) as dut:
             try:
                 subprocess.check_call(
-                    ["canfdtest", "-g", "-l", "1000", buses.tx.channel], timeout=5
+                    ["canfdtest", "-g", "-l", "1000", buses.tx.channel] + config.args,
+                    timeout=5,
                 )
             finally:
                 dut.kill()
