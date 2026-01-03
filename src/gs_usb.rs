@@ -17,9 +17,9 @@ pub type UsbResponseTx =
     embassy_sync::channel::Sender<'static, ThreadModeRawMutex, UsbResponse, USB_QUEUE_SIZE>;
 
 /// Size of per-interface queue for commands from USB
-pub const CHANNEL_QUEUE_SIZE: usize = 64;
+pub const CHANNEL_QUEUE_SIZE: usize = 256;
 /// Size of shared queue for responses to USB
-pub const USB_QUEUE_SIZE: usize = 64;
+pub const USB_QUEUE_SIZE: usize = 1024;
 /// Number of CAN interfaces supported
 pub const INTERFACES: usize = 3;
 /// Maximal size of USB BULK packet for USB Full-Speed
