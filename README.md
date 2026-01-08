@@ -3,6 +3,8 @@ STM32G4xx firmware written in Rust using the Embassy framework that bridges CAN 
 
 - 3x CAN channels
 
+<img src="hw/board.webp">
+
 ## Build & flash & run
 Install Rust via [rustup.rs](https://rustup.rs/).
 
