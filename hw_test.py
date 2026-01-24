@@ -70,16 +70,16 @@ CAN_FULL_DUPLEX_CONFIGS = [
 
 
 def open_can(iface: str, bitrate: int, dbitrate: int | None = None) -> can.Bus:
-    subprocess.run(["sudo", "ip", "link", "set", iface, "down"])
+    subprocess.check_call(["sudo", "ip", "link", "set", iface, "down"])
     args = []
     if dbitrate:
         args += ["fd", "on", "dbitrate", str(dbitrate)]
 
-    subprocess.run(
+    subprocess.check_call(
         ["sudo", "ip", "link", "set", iface, "type", "can", "bitrate", str(bitrate)]
         + args
     )
-    subprocess.run(["sudo", "ip", "link", "set", iface, "up"])
+    subprocess.check_call(["sudo", "ip", "link", "set", iface, "up"])
     return can.Bus(interface="socketcan", channel=iface, fd=dbitrate is not None)
 
 
