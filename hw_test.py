@@ -69,11 +69,18 @@ CAN_FULL_DUPLEX_CONFIGS = [
 ]
 
 
-def open_can(iface: str, bitrate: int, dbitrate: int | None = None) -> can.Bus:
+def open_can(
+    iface: str,
+    bitrate: int,
+    dbitrate: int | None = None,
+    termination: bool | None = None,
+) -> can.Bus:
     subprocess.check_call(["sudo", "ip", "link", "set", iface, "down"])
     args = []
     if dbitrate:
         args += ["fd", "on", "dbitrate", str(dbitrate)]
+    if termination is not None:
+        args += ["termination", "120" if termination else "0"]
 
     subprocess.check_call(
         ["sudo", "ip", "link", "set", iface, "type", "can", "bitrate", str(bitrate)]
@@ -194,6 +201,20 @@ def test_bitrates(channel_role: str, bitrate: int):
         received = buses.rx.recv(1)
         assert received.arbitration_id == 0x345
         assert list(received.data) == [1, 2, 3, 4, 5, 6, 7, 8]
+
+
+@pytest.mark.parametrize("channel", CHANNELS)
+def test_termination_conf(channel: int):
+    interfaces = channel_ifaces(channel)
+    for termination in [True, False, True]:
+        with open_can(interfaces.dut, 500000, termination=termination):
+            out = subprocess.check_output(
+                ["ip", "-detail", "link", "show", interfaces.dut], text=True
+            )
+            if termination:
+                assert "termination 120 " in out
+            else:
+                assert "termination 0 " in out
 
 
 @pytest.mark.parametrize("channel_role", ALL_CHANNEL_ROLES, ids=channel_role_id)

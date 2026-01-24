@@ -31,7 +31,7 @@ pub async fn can_usb_bridge(
     channel: u8,
     can: CanConfigurator<'static>,
     _stby: Output<'static>,
-    _term_en: Output<'static>,
+    mut term_en: Output<'static>,
     from_usb: UsbCommandRx,
     to_usb: UsbResponseTx,
 ) {
@@ -40,7 +40,7 @@ pub async fn can_usb_bridge(
     loop {
         can_state = match can_state {
             CanState::Configurable(can_configurator) => {
-                run_configurable(can_configurator, from_usb).await
+                run_configurable(can_configurator, &mut term_en, from_usb).await
             }
             CanState::Normal(can) => run_normal(channel, can, from_usb, to_usb).await,
         };
@@ -98,7 +98,11 @@ async fn run_normal(
 
 /// Run CAN in configurable mode, processing commands from USB to set bitrate and start normal operation.
 /// No CAN frames are processed in this mode.
-async fn run_configurable(mut can: CanConfigurator<'static>, from_usb: UsbCommandRx) -> CanState {
+async fn run_configurable(
+    mut can: CanConfigurator<'static>,
+    term_en: &mut Output<'static>,
+    from_usb: UsbCommandRx,
+) -> CanState {
     let mut config = FdCanConfig::default()
         .set_automatic_retransmit(false)
         .set_automatic_bus_off_recovery(false)
@@ -128,6 +132,13 @@ async fn run_configurable(mut can: CanConfigurator<'static>, from_usb: UsbComman
                     sync_jump_width: NonZero::new(bit_timing.sjw as u8).unwrap(),
                     transceiver_delay_compensation: false,
                 });
+            }
+            UsbCommand::SetTermination(enabled) => {
+                if enabled {
+                    term_en.set_high();
+                } else {
+                    term_en.set_low();
+                }
             }
             cmd => {
                 error!("Unknown command in configurable state: {}", cmd);

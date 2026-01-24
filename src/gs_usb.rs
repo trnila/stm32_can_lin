@@ -36,6 +36,7 @@ const CAN_FD_MAX_DLC: usize = 64;
 const CAN_FREQ: u32 = 24_000_000;
 
 const GS_CAN_FEATURE_FD: u32 = 1 << 8;
+const GS_CAN_FEATURE_TERMINATION: u32 = 1 << 11;
 
 const GS_USB_BREQ_HOST_FORMAT: u8 = 0;
 const GS_USB_BREQ_BITTIMING: u8 = 1;
@@ -43,6 +44,8 @@ const GS_USB_BREQ_MODE: u8 = 2;
 const GS_USB_BREQ_BT_CONST: u8 = 4;
 const GS_USB_BREQ_DEVICE_CONFIG: u8 = 5;
 const GS_USB_BREQ_DATA_BITTIMING: u8 = 10;
+const GS_USB_BREQ_SET_TERMINATION: u8 = 12;
+const GS_USB_BREQ_GET_TERMINATION: u8 = 13;
 
 const GS_CAN_MODE_RESET: u32 = 0;
 const GS_CAN_MODE_START: u32 = 1;
@@ -122,6 +125,10 @@ binary_layout!(gs_device_mode, LittleEndian, {
     flags: u32,
 });
 
+binary_layout!(gs_device_termination_state, LittleEndian, {
+    state: u32,
+});
+
 /// Get the structure view if it fits into the buffer
 macro_rules! assert_view_fits {
     ($module:ident, $buf:expr) => {{
@@ -148,6 +155,8 @@ pub enum UsbCommand {
     SetNominalBitTiming(BitTiming),
     /// Set data bit timing parameters (only in configuration mode)
     SetDataBitTiming(BitTiming),
+    /// Enable/Disable termination resistor (only in configuration mode)
+    SetTermination(bool),
     /// Transmit CAN frame (only in normal mode)
     TxFrame {
         frame: FrameType,
@@ -280,6 +289,17 @@ impl Handler for GsUsbControlHandler {
                 }));
                 OutResponse::Accepted
             }
+            GS_USB_BREQ_SET_TERMINATION => {
+                let (view, _len) = assert_view_fits!(gs_device_termination_state, &buf);
+                block_on(command_queue.send(UsbCommand::SetTermination(
+                    match view.state().read() {
+                        0 => false,
+                        1 => true,
+                        _ => unreachable!(),
+                    },
+                )));
+                OutResponse::Accepted
+            }
             _ => OutResponse::Rejected,
         })
     }
@@ -303,7 +323,8 @@ impl Handler for GsUsbControlHandler {
             }
             GS_USB_BREQ_BT_CONST => {
                 let (mut view, len) = assert_view_fits!(gs_device_bt_const, &mut buf);
-                view.feature_mut().write(GS_CAN_FEATURE_FD);
+                view.feature_mut()
+                    .write(GS_CAN_FEATURE_FD | GS_CAN_FEATURE_TERMINATION);
                 view.fclk_can_mut().write(CAN_FREQ);
 
                 view.tseg1_min_mut().write(1);
@@ -317,6 +338,12 @@ impl Handler for GsUsbControlHandler {
                 view.brp_min_mut().write(1);
                 view.brp_max_mut().write(512);
                 view.brp_inc_mut().write(1);
+                Some(InResponse::Accepted(&buf[..len]))
+            }
+            GS_USB_BREQ_GET_TERMINATION => {
+                let (mut view, len) = assert_view_fits!(gs_device_termination_state, &mut buf);
+                // Called only once during initialization
+                view.state_mut().write(0);
                 Some(InResponse::Accepted(&buf[..len]))
             }
             _ => Some(InResponse::Rejected),

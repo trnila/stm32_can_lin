@@ -2,6 +2,7 @@
 STM32G4xx firmware written in Rust using the Embassy framework that bridges CAN-FD buses to Linux via USB using the `gs_usb` driver and socketCAN interface.
 
 - 3x CAN-FD channels
+    - configurable 120Ω termination resistor
 
 <img src="hw/board.webp">
 
@@ -37,6 +38,14 @@ After the configuration, bring the interface `up`.
 Set CAN to 500 Kbps and CAN-FD to 1 Mbps:
 ```sh
 $ sudo ip link set can0 type can bitrate 500000 fd on dbitrate 1000000
+```
+
+### 120Ω termination resistor
+Termination resistor can be enabled in configuration mode via:
+```sh
+$ sudo ip link set can0 down
+$ sudo ip link set can0 type can bitrate 500000 termination 120
+$ sudo ip link set can0 up
 ```
 
 ## Test
