@@ -28,6 +28,12 @@ class DutChannelRole:
 
 
 @dataclass
+class ChannelInterfaces:
+    dut: str
+    test: str
+
+
+@dataclass
 class CanBuses:
     rx: can.Bus
     tx: can.Bus
@@ -77,25 +83,25 @@ def open_can(iface: str, bitrate: int, dbitrate: int | None = None) -> can.Bus:
     return can.Bus(interface="socketcan", channel=iface, fd=dbitrate is not None)
 
 
-@contextmanager
-def open_buses(
-    channel: DutChannelRole, bitrate: int = 500000, dbitrate: int | None = None
-):
-    channels = {}
-
+def channel_ifaces(channel: int) -> ChannelInterfaces:
     config = os.getenv("CAN_IFACES", "")
     if config:
         for s in config.split(","):
             chan, dut_iface, test_iface = s.split(":")
-            channels[int(chan)] = (dut_iface, test_iface)
+            if int(chan) == channel:
+                return ChannelInterfaces(dut_iface, test_iface)
+    pytest.skip(f"CAN channel {channel} not configured")
 
-    chan = channels.get(channel.channel, None)
-    if not chan:
-        pytest.skip(f"CAN channel {channel.channel} not configured")
+
+@contextmanager
+def open_buses(
+    channel: DutChannelRole, bitrate: int = 500000, dbitrate: int | None = None
+):
+    chan = channel_ifaces(channel.channel)
 
     with (
-        open_can(chan[0], bitrate, dbitrate) as bus_a,
-        open_can(chan[1], bitrate, dbitrate) as bus_b,
+        open_can(chan.dut, bitrate, dbitrate) as bus_a,
+        open_can(chan.test, bitrate, dbitrate) as bus_b,
     ):
         if channel.role == ChannelRole.TX:
             yield CanBuses(bus_a, bus_b)
