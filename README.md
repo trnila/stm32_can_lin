@@ -48,6 +48,15 @@ $ sudo ip link set can0 type can bitrate 500000 termination 120
 $ sudo ip link set can0 up
 ```
 
+### Persistent interface names
+Configure udev rules (`/etc/udev/rules.d/91-scan.rules`) for persistent interface names:
+```
+SUBSYSTEM=="net", ENV{ID_SERIAL}=="trnila_STM32_CAN_LIN_1", ATTR{dev_id}=="0x0", NAME="scan0"
+SUBSYSTEM=="net", ENV{ID_SERIAL}=="trnila_STM32_CAN_LIN_1", ATTR{dev_id}=="0x1", NAME="scan1"
+SUBSYSTEM=="net", ENV{ID_SERIAL}=="trnila_STM32_CAN_LIN_1", ATTR{dev_id}=="0x2", NAME="scan2"
+```
+and then reload `sudo udevadm control --reload-rules` and re-plug the device.
+
 ## Test
 Install following dependencies:
 - uv
