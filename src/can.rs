@@ -124,13 +124,14 @@ async fn run_configurable(
                 });
             }
             UsbCommand::SetDataBitTiming(bit_timing) => {
-                config = config.set_data_bit_timing(can::config::DataBitTiming {
-                    prescaler: NonZero::new(bit_timing.brp as u16).unwrap(),
-                    seg1: NonZero::new((bit_timing.prop_seg + bit_timing.phase_seg1) as u8)
-                        .unwrap(),
-                    seg2: NonZero::new(bit_timing.phase_seg2 as u8).unwrap(),
-                    sync_jump_width: NonZero::new(bit_timing.sjw as u8).unwrap(),
-                    transceiver_delay_compensation: false,
+                config = config.set_data_bit_timing({
+                    let mut config = can::config::DataBitTiming::default();
+                    config.prescaler = NonZero::new(bit_timing.brp as u16).unwrap();
+                    config.seg1 =
+                        NonZero::new((bit_timing.prop_seg + bit_timing.phase_seg1) as u8).unwrap();
+                    config.seg2 = NonZero::new(bit_timing.phase_seg2 as u8).unwrap();
+                    config.sync_jump_width = NonZero::new(bit_timing.sjw as u8).unwrap();
+                    config
                 });
             }
             UsbCommand::SetTermination(enabled) => {

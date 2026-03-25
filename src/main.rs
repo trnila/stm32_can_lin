@@ -49,18 +49,18 @@ async fn main(spawner: Spawner) {
             freq: mhz(24),
             mode: rcc::HseMode::Oscillator,
         });
-        config.rcc.sys = rcc::Sysclk::PLL1_R;
+        config.rcc.sys = rcc::Sysclk::Pll1R;
         config.rcc.pll = Some(rcc::Pll {
-            source: rcc::PllSource::HSE,
-            prediv: rcc::PllPreDiv::DIV6,
-            mul: rcc::PllMul::MUL85,
-            divr: Some(rcc::PllRDiv::DIV2),
-            divq: Some(rcc::PllQDiv::DIV2),
-            divp: Some(rcc::PllPDiv::DIV2),
+            source: rcc::PllSource::Hse,
+            prediv: rcc::PllPreDiv::Div6,
+            mul: rcc::PllMul::Mul85,
+            divr: Some(rcc::PllRDiv::Div2),
+            divq: Some(rcc::PllQDiv::Div2),
+            divp: Some(rcc::PllPDiv::Div2),
         });
-        config.rcc.ahb_pre = rcc::AHBPrescaler::DIV1;
-        config.rcc.apb1_pre = rcc::APBPrescaler::DIV2;
-        config.rcc.mux.fdcansel = rcc::mux::Fdcansel::HSE;
+        config.rcc.ahb_pre = rcc::AHBPrescaler::Div1;
+        config.rcc.apb1_pre = rcc::APBPrescaler::Div2;
+        config.rcc.mux.fdcansel = rcc::mux::Fdcansel::Hse;
         config
     });
 
